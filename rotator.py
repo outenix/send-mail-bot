@@ -1,12 +1,16 @@
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from email.mime.base import MIMEBase
+from email import encoders
 import json
 import os
 import re
 
 ACCOUNT_FILE = "account.json"
 EMAIL_FILE = "email.json"
+EXTRA_INFO_FILE = "extra_info.txt"
+LOG_FILE = "logs.zip"
 
 
 # =========================
@@ -138,11 +142,30 @@ def send_mail(sender_email, app_password, target_email, subject, body):
         subject = str(subject)
         body = str(body)
 
+        # Tambahkan extra info jika ada
+        if os.path.exists(EXTRA_INFO_FILE):
+            with open(EXTRA_INFO_FILE, "r", encoding="utf-8") as f:
+                extra_text = f.read().strip()
+            if extra_text:
+                body += "\n\n" + extra_text
+
         msg = MIMEMultipart()
         msg["From"] = sender_email
         msg["To"] = target_email
         msg["Subject"] = subject
         msg.attach(MIMEText(body, "plain", "utf-8"))
+
+        # Sisipkan file logs.zip jika ada
+        if os.path.exists(LOG_FILE):
+            with open(LOG_FILE, "rb") as f:
+                part = MIMEBase("application", "zip")
+                part.set_payload(f.read())
+                encoders.encode_base64(part)
+                part.add_header(
+                    "Content-Disposition",
+                    f'attachment; filename="{os.path.basename(LOG_FILE)}"',
+                )
+                msg.attach(part)
 
         with smtplib.SMTP("smtp.gmail.com", 587) as server:
             server.starttls()
