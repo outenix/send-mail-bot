@@ -3,6 +3,7 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import json
 import os
+import re
 
 ACCOUNT_FILE = "account.json"
 EMAIL_FILE = "email.json"
@@ -77,10 +78,17 @@ def load_targets():
         except json.JSONDecodeError:
             data = {"targets": []}
 
-    # Jika salah format (list), ubah jadi dict
+    # Konversi format lama: [{"target": "email"}] → {"targets": ["email"]}
     if isinstance(data, list):
-        data = {"targets": data}
+        fixed_targets = []
+        for item in data:
+            if isinstance(item, dict) and "target" in item:
+                fixed_targets.append(item["target"])
+            elif isinstance(item, str):
+                fixed_targets.append(item)
+        data = {"targets": fixed_targets}
 
+    # Pastikan key "targets" ada
     if "targets" not in data:
         data["targets"] = []
 
@@ -92,19 +100,25 @@ def save_targets(data):
         json.dump(data, f, indent=2)
 
 
+def is_valid_email(email: str) -> bool:
+    if not email or not isinstance(email, str):
+        return False
+    pattern = r"^[\w\.-]+@[\w\.-]+\.\w+$"
+    return re.match(pattern, email) is not None
+
+
 def add_target(email_target):
     data = load_targets()
+    email_target = str(email_target).strip()
 
-    # pastikan selalu string
-    if isinstance(email_target, dict):
-        email_target = email_target.get("email", "")
-    if isinstance(email_target, list) and email_target:
-        email_target = email_target[0]
+    if not is_valid_email(email_target):
+        return False
 
-    if email_target and email_target not in data["targets"]:
+    if email_target not in data["targets"]:
         data["targets"].append(email_target)
 
     save_targets(data)
+    return True
 
 
 def get_targets():
@@ -117,11 +131,12 @@ def get_targets():
 # =========================
 def send_mail(sender_email, app_password, target_email, subject, body):
     try:
-        # pastikan target email berupa string
-        if isinstance(target_email, dict):
-            target_email = target_email.get("email", "")
-        elif isinstance(target_email, list):
-            target_email = target_email[0]
+        target_email = str(target_email).strip()
+        if not is_valid_email(target_email):
+            return False, "Alamat email tujuan tidak valid."
+
+        subject = str(subject)
+        body = str(body)
 
         msg = MIMEMultipart()
         msg["From"] = sender_email
@@ -131,7 +146,7 @@ def send_mail(sender_email, app_password, target_email, subject, body):
 
         with smtplib.SMTP("smtp.gmail.com", 587) as server:
             server.starttls()
-            server.login(sender_email, app_password)
+            server.login(sender_email, app_password)  # Gunakan App Password Gmail
             server.sendmail(sender_email, [target_email], msg.as_string())
 
         return True, "Email berhasil dikirim."
