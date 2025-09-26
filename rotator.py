@@ -1,5 +1,7 @@
 import json, os, tempfile
 from threading import Lock
+import smtplib
+from email.mime.text import MIMEText
 
 ACCOUNT_FILE = "account.json"
 EMAIL_FILE = "email.json"
@@ -79,6 +81,34 @@ def save_targets(targets):
 
 
 def add_target(email_target):
+    targets = load_targets()
+    targets.append({"target": email_target})
+    save_targets(targets)
+
+
+def get_first_target():
+    targets = load_targets()
+    return targets[0]["target"] if targets else None
+
+
+# ------------------------
+# Send Email via Gmail SMTP
+# ------------------------
+def send_mail(sender_email, app_password, target_email, subject, body):
+    try:
+        msg = MIMEText(body, "plain", "utf-8")
+        msg["From"] = sender_email
+        msg["To"] = target_email
+        msg["Subject"] = subject
+
+        with smtplib.SMTP("smtp.gmail.com", 587) as server:
+            server.starttls()
+            server.login(sender_email, app_password)
+            server.send_message(msg)
+
+        return True, "Email berhasil dikirim."
+    except Exception as e:
+        return False, str(e)def add_target(email_target):
     targets = load_targets()
     targets.append({"target": email_target})
     save_targets(targets)
