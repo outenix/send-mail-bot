@@ -91,3 +91,11 @@ def add_target(email_target):
 def get_targets():
     data = load_targets()
     return data.get("targets", [])
+
+
+# 🔹 Tambahan untuk kompatibilitas main.py
+def get_accounts():
+    accounts = load_accounts()
+    available = [acc for acc in accounts if acc.get("used", 0) < 2]
+    usedup = [acc for acc in accounts if acc.get("used", 0) >= 2]
+    return available, usedup
