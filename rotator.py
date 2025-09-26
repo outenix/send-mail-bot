@@ -41,6 +41,8 @@ def get_accounts():
     usedup = [acc for acc in accounts if acc.get("used", 0) >= 2]
     return available, usedup
 
+def clear_accounts():
+    save_json("accounts.json", [])
 
 def rotate_account():
     available, _ = get_accounts()
