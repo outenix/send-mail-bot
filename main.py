@@ -16,7 +16,7 @@ async def start_handler(client, message):
 
     text = "📊 Status Akun\n\n"
     text += f"Email Tersedia: {len(available)}\n"
-    text += f"Email Digunakan (sudah 2x): {len(usedup)}\n\n"
+    text += f"Email Digunakan (>=2x): {len(usedup)}\n\n"
 
     if targets:
         text += "🎯 Email Tujuan:\n"
@@ -34,6 +34,9 @@ async def start_handler(client, message):
 
     await message.reply(text, reply_markup=InlineKeyboardMarkup(buttons))
 
+
+# nanti di sini bisa ditambah handler callback_data add_email, del_email, dll.
+# untuk sekarang hanya tampilan awal start
 
 print("✅ Bot jalan...")
 app.run()
