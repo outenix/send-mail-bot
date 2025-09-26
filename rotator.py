@@ -1,44 +1,64 @@
+import os
+import json
 import smtplib
 from email.mime.text import MIMEText
-import json
-import os
+from email.mime.multipart import MIMEMultipart
 
-ACCOUNT_FILE = "account.json"
-EMAIL_FILE = "email.json"
+ACCOUNTS_FILE = "accounts.json"
+TARGETS_FILE = "targets.json"
 
 
 # =========================
-# ACCOUNT HANDLING
+# JSON HANDLING
 # =========================
-def load_accounts():
-    if not os.path.exists(ACCOUNT_FILE):
-        with open(ACCOUNT_FILE, "w") as f:
-            json.dump([], f)
-
-    with open(ACCOUNT_FILE, "r") as f:
+def load_json(path, default):
+    if not os.path.exists(path):
+        save_json(path, default)
+        return default
+    with open(path, "r") as f:
         try:
-            accounts = json.load(f)
-        except json.JSONDecodeError:
-            accounts = []
+            return json.load(f)
+        except:
+            return default
 
-    return accounts
+
+def save_json(path, data):
+    with open(path, "w") as f:
+        json.dump(data, f, indent=2)
+
+
+def load_accounts():
+    return load_json(ACCOUNTS_FILE, [])
 
 
 def save_accounts(accounts):
-    with open(ACCOUNT_FILE, "w") as f:
-        json.dump(accounts, f, indent=2)
+    save_json(ACCOUNTS_FILE, accounts)
 
 
+def load_targets():
+    return load_json(TARGETS_FILE, {"targets": []})
+
+
+def save_targets(targets):
+    save_json(TARGETS_FILE, targets)
+
+
+# =========================
+# ACCOUNT MANAGEMENT
+# =========================
 def get_accounts():
     accounts = load_accounts()
-    available = [acc for acc in accounts if acc.get("used", 0) < 2]
-    usedup = [acc for acc in accounts if acc.get("used", 0) >= 2]
+    available = [a for a in accounts if a.get("used", 0) < 2]
+    usedup = [a for a in accounts if a.get("used", 0) >= 2]
     return available, usedup
 
 
 def rotate_account():
-    available, _ = get_accounts()
-    return available[0] if available else None
+    accounts = load_accounts()
+    available = [a for a in accounts if a.get("used", 0) < 2]
+    if not available:
+        return None
+    return available[0]  # ambil yang pertama
 
 
 def mark_account_used(email):
@@ -49,46 +69,18 @@ def mark_account_used(email):
     save_accounts(accounts)
 
 
-def reset_used():
-    accounts = load_accounts()
-    for acc in accounts:
-        acc["used"] = 0
-    save_accounts(accounts)
-
-
 def delete_used():
     accounts = load_accounts()
-    accounts = [acc for acc in accounts if acc.get("used", 0) < 2]
+    accounts = [a for a in accounts if a.get("used", 0) < 2]
     save_accounts(accounts)
 
 
 # =========================
-# TARGET HANDLING
+# TARGET MANAGEMENT
 # =========================
-def load_targets():
-    if not os.path.exists(EMAIL_FILE):
-        with open(EMAIL_FILE, "w") as f:
-            json.dump({"targets": []}, f)
-
-    with open(EMAIL_FILE, "r") as f:
-        try:
-            data = json.load(f)
-        except json.JSONDecodeError:
-            data = {"targets": []}
-
-    # Jika salah format (list), ubah jadi dict
-    if isinstance(data, list):
-        data = {"targets": data}
-
-    if "targets" not in data:
-        data["targets"] = []
-
-    return data
-
-
-def save_targets(data):
-    with open(EMAIL_FILE, "w") as f:
-        json.dump(data, f, indent=2)
+def get_targets():
+    data = load_targets()
+    return data.get("targets", [])
 
 
 def add_target(email_target):
@@ -98,26 +90,24 @@ def add_target(email_target):
     save_targets(data)
 
 
-def get_targets():
-    data = load_targets()
-    return data.get("targets", [])
-
-
 # =========================
-# EMAIL SENDER
+# SENDING EMAIL
 # =========================
 def send_mail(sender_email, app_password, target_email, subject, body):
     try:
-        msg = MIMEText(body, "plain", "utf-8")
+        msg = MIMEMultipart()
         msg["From"] = sender_email
         msg["To"] = target_email
         msg["Subject"] = subject
 
-        with smtplib.SMTP("smtp.gmail.com", 587) as server:
-            server.starttls()
-            server.login(sender_email, app_password)
-            server.send_message(msg)
+        msg.attach(MIMEText(body, "plain"))
 
-        return True, "Email berhasil dikirim."
+        server = smtplib.SMTP("smtp.gmail.com", 587)
+        server.starttls()
+        server.login(sender_email, app_password)
+        server.sendmail(sender_email, target_email, msg.as_string())
+        server.quit()
+
+        return True, "Email sent"
     except Exception as e:
         return False, str(e)
