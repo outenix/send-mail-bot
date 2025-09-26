@@ -1,0 +1,67 @@
+--Support Info--
+App: com.whatsapp
+Architecture: aarch64
+AutoConf status: null
+Board: sdm710
+Build: vivo/1951/1951:11/RP1A.200720.012/compiler1013155757:user/release-keys
+CCode: 591 76126465
+CPU ABI: arm64-v8a
+Carrier: TELKOMSEL
+Description: 2.25.27.4
+Device: 1951
+Device ID: 0
+Device ISO8601: 2025-09-24 21:43:38.116+0700
+Embeddings Index: state: NOT_STARTED, progress: 0, finished: --, last updated: --
+FAQ Results Read: 10
+FAQ Results Returned: 10
+Is Foldable: false
+Is Tablet: false
+Kernel: Unknown release unknown version
+LC: IN
+LG: en
+Manufacturer: vivo
+Missing Permissions: android.permission.BLUETOOTH_CONNECT, android.permission.POST_NOTIFICATIONS, android.permission.NEARBY_WIFI_DEVICES, android.permission.BLUETOOTH_SCAN, android.permission.BLUETOOTH_ADVERTISE, android.permission.READ_PHONE_STATE, android.permission.READ_PHONE_NUMBERS, android.permission.RECEIVE_SMS, android.permission.FOREGROUND_SERVICE_DATA_SYNC, android.permission.ACCESS_MEDIA_LOCATION, android.permission.FOREGROUND_SERVICE_LOCATION, android.permission.INSTALL_SHORTCUT, android.permission.READ_CONTACTS, android.permission.READ_BASIC_PHONE_STATE, android.permission.SCHEDULE_EXACT_ALARM, android.permission.SEND_SMS, android.permission.WRITE_CONTACTS, android.permission.WRITE_EXTERNAL_STORAGE, android.permission.READ_MEDIA_AUDIO, android.permission.READ_MEDIA_IMAGES, android.permission.READ_MEDIA_VIDEO, android.permission.READ_MEDIA_VISUAL_USER_SELECTED, android.permission.REQUEST_INSTALL_PACKAGES, com.sec.android.provider.badge.permission.READ, com.sec.android.provider.badge.permission.WRITE, com.htc.launcher.permission.READ_SETTINGS, com.htc.launcher.permission.UPDATE_SHORTCUT, com.sonyericsson.home.permission.BROADCAST_BADGE, com.sonymobile.home.permission.PROVIDER_INSERT_BADGE, com.huawei.android.launcher.permission.READ_SETTINGS, com.huawei.android.launcher.permission.WRITE_SETTINGS, com.huawei.android.launcher.permission.CHANGE_BADGE, android.permission.CALL_PHONE, android.permission.ANSWER_PHONE_CALLS, android.permission.READ_CALL_LOG, android.permission.GET_ACCOUNTS, android.permission.FOREGROUND_SERVICE_MICROPHONE, android.permission.FOREGROUND_SERVICE_CAMERA, android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION, android.permission.FOREGROUND_SERVICE_PHONE_CALL, android.permission.DETECT_SCREEN_CAPTURE, android.permission.RUN_USER_INITIATED_JOBS
+Model: vivo 1918
+Network Type: L.T.E.
+OS: 11
+PSI abprops:: ai_psi_enabled:false, semantic_search_enabled:false
+Phone Type: G.S.M.
+Product: 1951
+Radio MCC-MNC: 510-10
+SIM MCC-MNC: 510-10
+Target: beta
+Version: 2.25.27.4
+Debug info: unregistered
+MDEnabled: true
+HasMdCompanion: false
+Context: register-phone-invalid
+useragent: WhatsApp/2.25.27.4 Android/11 Device/vivo-vivo_1918
+Socket Conn: DN
+Free Space Built-In: 35349983232 (35.35 GB)
+Free Space Removable: 35140268032 (35.14 GB)
+Smb count: 0
+Ent count: 0
+Connection: M.O.B.I.L.E. (L.T.E.)
+Diagnostic Codes: FE-GDE FE-GDC FE-VIDC FE-SMSRTV
+Sim: null 5
+Network metered: 224:true
+Network restricted: 224:false
+Data roaming: false
+Tel roaming: false
+ABprops hash state: unregistered
+Serverprops hash state: unregistered
+anid: 29b3127f-6b0e-4c4d-ba99-42a7c1f6553b
+XPMigrated: no
+Screen reader: false
+Fingerprint eligible: true
+Last local backup time: never
+Google account added: false
+Groups media visibility: default
+Individual media visibility: default
+In scoped mode: true
+Has unexpected .nomedia: false
+Is Companion: false
+Has Wear OS Companion: false
+saga_copy: true
+pn: 59176126465
+ 
