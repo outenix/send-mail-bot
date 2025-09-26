@@ -1,99 +1,67 @@
-import json, os, tempfile
-from threading import Lock
 import smtplib
 from email.mime.text import MIMEText
+import json
+import os
 
 ACCOUNT_FILE = "account.json"
 EMAIL_FILE = "email.json"
-MAX_USES = 2
-_accounts_lock = Lock()
 
 
-def ensure_file(path, default_content):
-    if not os.path.exists(path):
-        with open(path, "w", encoding="utf-8") as f:
-            json.dump(default_content, f, indent=2)
-
-
-def load_json(path, default_content):
-    ensure_file(path, default_content)
-    with open(path, "r", encoding="utf-8") as f:
+def load_accounts():
+    if not os.path.exists(ACCOUNT_FILE):
+        with open(ACCOUNT_FILE, "w") as f:
+            json.dump([], f)
+    with open(ACCOUNT_FILE, "r") as f:
         return json.load(f)
 
 
-def save_json(path, data):
-    fd, tmp_path = tempfile.mkstemp(dir=".", prefix=".tmp_", text=True)
-    try:
-        with os.fdopen(fd, "w", encoding="utf-8") as tmp:
-            json.dump(data, tmp, indent=2, ensure_ascii=False)
-            tmp.flush()
-            os.fsync(tmp.fileno())
-        os.replace(tmp_path, path)
-    except Exception:
-        try:
-            os.remove(tmp_path)
-        except:
-            pass
-        raise
-
-
-# ------------------------
-# Account management
-# ------------------------
-def load_accounts():
-    return load_json(ACCOUNT_FILE, [])
-
-
 def save_accounts(accounts):
-    save_json(ACCOUNT_FILE, accounts)
+    with open(ACCOUNT_FILE, "w") as f:
+        json.dump(accounts, f, indent=2)
 
 
-def add_account(email, app_password):
-    with _accounts_lock:
-        accounts = load_accounts()
-        accounts.append({"email": email, "app_password": app_password, "used": 0})
-        save_accounts(accounts)
-
-
-def delete_used_accounts():
-    with _accounts_lock:
-        accounts = load_accounts()
-        accounts = [a for a in accounts if a.get("used", 0) < MAX_USES]
-        save_accounts(accounts)
-
-
-def get_accounts():
-    accounts = load_accounts()
-    available = [a for a in accounts if a.get("used", 0) < MAX_USES]
-    usedup = [a for a in accounts if a.get("used", 0) >= MAX_USES]
-    return available, usedup
-
-
-# ------------------------
-# Email tujuan management
-# ------------------------
 def load_targets():
-    return load_json(EMAIL_FILE, [])
+    if not os.path.exists(EMAIL_FILE):
+        with open(EMAIL_FILE, "w") as f:
+            json.dump({"targets": []}, f)
+    with open(EMAIL_FILE, "r") as f:
+        return json.load(f)
 
 
-def save_targets(targets):
-    save_json(EMAIL_FILE, targets)
+def save_targets(data):
+    with open(EMAIL_FILE, "w") as f:
+        json.dump(data, f, indent=2)
 
 
-def add_target(email_target):
-    targets = load_targets()
-    targets.append({"target": email_target})
-    save_targets(targets)
+def rotate_account():
+    accounts = load_accounts()
+    for acc in accounts:
+        if acc.get("used", 0) < 2:
+            return acc
+    return None
 
 
-def get_first_target():
-    targets = load_targets()
-    return targets[0]["target"] if targets else None
+def mark_account_used(email):
+    accounts = load_accounts()
+    for acc in accounts:
+        if acc["email"] == email:
+            acc["used"] = acc.get("used", 0) + 1
+    save_accounts(accounts)
 
 
-# ------------------------
-# Send Email via Gmail SMTP
-# ------------------------
+def reset_used():
+    accounts = load_accounts()
+    for acc in accounts:
+        acc["used"] = 0
+    save_accounts(accounts)
+
+
+def delete_used():
+    accounts = load_accounts()
+    accounts = [acc for acc in accounts if acc.get("used", 0) < 2]
+    save_accounts(accounts)
+
+
 def send_mail(sender_email, app_password, target_email, subject, body):
     try:
         msg = MIMEText(body, "plain", "utf-8")
@@ -108,12 +76,18 @@ def send_mail(sender_email, app_password, target_email, subject, body):
 
         return True, "Email berhasil dikirim."
     except Exception as e:
-        return False, str(e)def add_target(email_target):
-    targets = load_targets()
-    targets.append({"target": email_target})
-    save_targets(targets)
+        return False, str(e)
 
 
-def get_first_target():
-    targets = load_targets()
-    return targets[0]["target"] if targets else None
+def add_target(email_target):
+    data = load_targets()
+    if "targets" not in data:
+        data["targets"] = []
+    if email_target not in data["targets"]:
+        data["targets"].append(email_target)
+    save_targets(data)
+
+
+def get_targets():
+    data = load_targets()
+    return data.get("targets", [])
