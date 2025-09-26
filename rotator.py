@@ -1,5 +1,6 @@
 import smtplib
 from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 import json
 import os
 
@@ -104,19 +105,21 @@ def get_targets():
 
 
 # =========================
-# EMAIL SENDER
+# EMAIL SENDER (GMAIL APP PASSWORD)
 # =========================
 def send_mail(sender_email, app_password, target_email, subject, body):
     try:
-        msg = MIMEText(body, "plain", "utf-8")
+        # Gunakan MIMEMultipart supaya fleksibel (bisa HTML/attachment juga kalau perlu)
+        msg = MIMEMultipart()
         msg["From"] = sender_email
         msg["To"] = target_email
         msg["Subject"] = subject
+        msg.attach(MIMEText(body, "plain", "utf-8"))
 
         with smtplib.SMTP("smtp.gmail.com", 587) as server:
             server.starttls()
-            server.login(sender_email, app_password)
-            server.send_message(msg)
+            server.login(sender_email, app_password)  # pakai App Password Gmail
+            server.sendmail(sender_email, target_email, msg.as_string())
 
         return True, "Email berhasil dikirim."
     except Exception as e:
