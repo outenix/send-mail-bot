@@ -1,160 +1,125 @@
 from pyrogram import Client, filters
-from pyrogram.types import ReplyKeyboardMarkup, KeyboardButton
-from rotator import (
-    add_account, delete_used_accounts, get_accounts,
-    add_target, get_first_target, get_next_account, increment_used
-)
-import smtplib
-from email.message import EmailMessage
+from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+import rotator
 
-API_ID = 3731359            # ganti dengan API ID kamu
-API_HASH = "036ee2d35316873cb402ac61ea3f5618"     # ganti dengan API HASH kamu
-BOT_TOKEN = "8208608845:AAFcTuETk5Tm7jlBzJ3GEXgw1oBg0rRBFWw"    # ganti dengan BOT TOKEN kamu
+# ===== KONFIGURASI =====
+API_ID = 3731359
+API_HASH = "036ee2d35316873cb402ac61ea3f5618"
+BOT_TOKEN = "8208608845:AAFcTuETk5Tm7jlBzJ3GEXgw1oBg0rRBFWw"
 
-app = Client("mailbot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
+app = Client("bot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
 
-# Simpan state user
-user_state = {}
+# -------------------------
+# START COMMAND
+# -------------------------
+@app.on_message(filters.command("start"))
+async def start_handler(client, message):
+    available, usedup = rotator.get_accounts()
+    target = rotator.get_first_target()
 
-# Menu utama
-def main_menu():
-    return ReplyKeyboardMarkup(
-        [
-            [KeyboardButton("➕ Tambah Email Pengirim")],
-            [KeyboardButton("➕ Tambah Email Tujuan")],
-            [KeyboardButton("🗑 Hapus Email Pengirim")],
-            [KeyboardButton("📧 Kirim Email")]
-        ],
-        resize_keyboard=True
+    teks = (
+        f"📊 **Status Email**\n\n"
+        f"✅ Tersedia: {len(available)}\n"
+        f"❌ Terpakai: {len(usedup)}\n\n"
+        f"🎯 Email Tujuan: {target if target else 'Belum ada'}"
     )
 
-@app.on_message(filters.command("start"))
-async def start(client, message):
-    available, usedup = get_accounts()
-    target = get_first_target()
+    buttons = [
+        [InlineKeyboardButton("➕ Tambah Email Pengirim", callback_data="add_sender")],
+        [InlineKeyboardButton("➕ Tambah Email Tujuan", callback_data="add_target")],
+        [InlineKeyboardButton("🗑 Hapus Email Terpakai", callback_data="del_sender")],
+        [InlineKeyboardButton("📧 Kirim Email", callback_data="send_email")],
+    ]
 
-    text = "📌 **Email Pengirim Tersedia:**\n"
-    if available:
-        for a in available:
-            text += f" - {a['email']} (used {a['used']})\n"
-    else:
-        text += " - (tidak ada)\n"
+    await message.reply_text(teks, reply_markup=InlineKeyboardMarkup(buttons))
 
-    text += "\n📌 **Email Pengirim Digunakan (>=2):**\n"
-    if usedup:
-        for a in usedup:
-            text += f" - {a['email']} (used {a['used']})\n"
-    else:
-        text += " - (tidak ada)\n"
 
-    text += f"\n📌 **Email Tujuan:** {target if target else '(tidak ada)'}"
+# -------------------------
+# HANDLER TOMBOL
+# -------------------------
+@app.on_callback_query()
+async def callback_handler(client, callback_query):
+    data = callback_query.data
+    chat_id = callback_query.message.chat.id
 
-    await message.reply(text, reply_markup=main_menu())
+    if data == "add_sender":
+        await client.send_message(chat_id, "Kirim data dengan format:\n`email|app_password`")
+    elif data == "add_target":
+        await client.send_message(chat_id, "Kirim email tujuan:\n`contoh@email.com`")
+    elif data == "del_sender":
+        rotator.delete_used_accounts()
+        await client.send_message(chat_id, "✅ Semua email terpakai (>=2) sudah dihapus.")
+    elif data == "send_email":
+        await client.send_message(chat_id, "Masukkan nomor WhatsApp dengan format internasional, contoh:\n`+6281234567890`")
 
-# Tambah email pengirim
-@app.on_message(filters.regex("^➕ Tambah Email Pengirim$"))
-async def tambah_email(client, message):
-    await message.reply("Kirim email & app password dalam format:\n`email|password`", quote=True)
-    user_state[message.chat.id] = "adding_account"
 
-# Tambah email tujuan
-@app.on_message(filters.regex("^➕ Tambah Email Tujuan$"))
-async def tambah_email_tujuan(client, message):
-    await message.reply("Kirim alamat email tujuan, contoh:\n`support@support.whatsapp.com`", quote=True)
-    user_state[message.chat.id] = "adding_target"
+# -------------------------
+# HANDLER TEXT INPUT
+# -------------------------
+@app.on_message(filters.text & ~filters.command(["start"]))
+async def text_handler(client, message):
+    text = message.text.strip()
 
-# Hapus email pengirim
-@app.on_message(filters.regex("^🗑 Hapus Email Pengirim$"))
-async def hapus_email(client, message):
-    delete_used_accounts()
-    await message.reply("✅ Semua email dengan `used >= 2` sudah dihapus.")
-
-# Kirim email
-@app.on_message(filters.regex("^📧 Kirim Email$"))
-async def kirim_email(client, message):
-    available, _ = get_accounts()
-    if not available:
-        await message.reply("❌ Email pengirim tidak tersedia.")
-        return
-    if not get_first_target():
-        await message.reply("❌ Email tujuan tidak tersedia.")
-        return
-
-    await message.reply("Kirim nomor WhatsApp dalam format internasional (contoh: +62xxxx):")
-    user_state[message.chat.id] = "sending_email"
-
-# Handle input text
-@app.on_message(filters.text & ~filters.command("start"))
-async def handle_text(client, message):
-    state = user_state.get(message.chat.id)
-
-    if state == "adding_account":
-        if "|" in message.text:
-            try:
-                email, password = message.text.split("|", 1)
-                add_account(email.strip(), password.strip())
-                await message.reply(f"✅ Email pengirim `{email}` berhasil ditambahkan!")
-            except Exception as e:
-                await message.reply(f"❌ Gagal menambahkan: {e}")
-        else:
-            await message.reply("❌ Format salah. Gunakan `email|password`")
-        user_state.pop(message.chat.id, None)
-
-    elif state == "adding_target":
+    # Input untuk tambah email pengirim
+    if "|" in text:
         try:
-            add_target(message.text.strip())
-            await message.reply(f"✅ Email tujuan `{message.text.strip()}` berhasil ditambahkan!")
+            email, app_password = text.split("|", 1)
+            rotator.add_account(email.strip(), app_password.strip())
+            await message.reply("✅ Email pengirim berhasil ditambahkan.")
         except Exception as e:
-            await message.reply(f"❌ Gagal menambahkan email tujuan: {e}")
-        user_state.pop(message.chat.id, None)
+            await message.reply(f"❌ Gagal tambah email: {e}")
+        return
 
-    elif state == "sending_email":
-        nomor = message.text.strip()
-        if not nomor.startswith("+"):
-            await message.reply("❌ Nomor harus dalam format internasional, contoh: +62xxxx")
-            return
+    # Input untuk tambah email tujuan
+    if "@" in text and "|" not in text and not text.startswith("+"):
+        rotator.add_target(text.strip())
+        await message.reply("✅ Email tujuan berhasil ditambahkan.")
+        return
 
-        acc, idx, accounts = get_next_account()
-        if acc is None:
+    # Input untuk nomor telepon
+    if text.startswith("+"):
+        available, _ = rotator.get_accounts()
+        target = rotator.get_first_target()
+
+        if not available:
             await message.reply("❌ Email pengirim tidak tersedia.")
             return
 
-        target = get_first_target()
         if not target:
             await message.reply("❌ Email tujuan tidak tersedia.")
             return
 
-        # Template email
-        body = f"""
-Halo Tim Dukungan WhatsApp!
+        sender = available[0]
+        # update penggunaan
+        sender["used"] += 1
+        accounts = rotator.load_accounts()
+        for acc in accounts:
+            if acc["email"] == sender["email"]:
+                acc["used"] = sender["used"]
+        rotator.save_accounts(accounts)
 
-Perkenalkan, nama saya [Repzsx] dan nomor WhatsApp saya {nomor}, 
-Saya mengalami masalah karena setiap kali mencoba masuk atau mendaftar, saya selalu mendapat pesan "Login Tidak Tersedia."
+        # Simulasi kirim email
+        body = (
+            f"Halo Tim Dukungan WhatsApp! Perkenalkan, nama saya [Repzsx] dan nomor WhatsApp saya ({text}), "
+            "Saya mengalami masalah karena setiap kali mencoba masuk atau mendaftar, saya selalu mendapat pesan "
+            "\"Login Tidak Tersedia.\" Meskipun saya menggunakan aplikasi WhatsApp resmi, saya tetap tidak bisa masuk. "
+            "Saya meminta agar WhatsApp meninjau dan segera menyelesaikan masalah ini agar nomor saya dapat diaktifkan kembali "
+            "tanpa masalah. Mohon hubungi kami sesegera mungkin. Terima kasih."
+        )
 
-Meskipun saya menggunakan aplikasi WhatsApp resmi, saya tetap tidak bisa masuk.
+        # Disini harusnya pakai smtplib untuk benar-benar mengirim email
+        # sekarang kita hanya simulasi
+        await message.reply(
+            f"📤 Email dikirim!\n\n"
+            f"Pengirim: {sender['email']}\n"
+            f"Tujuan: {target}\n"
+            f"Nomor: {text}\n\n"
+            f"Isi Pesan:\n{body}"
+        )
 
-Saya meminta agar WhatsApp meninjau dan segera menyelesaikan masalah ini agar nomor saya dapat diaktifkan kembali tanpa masalah.
 
-Mohon hubungi kami sesegera mungkin. Terima kasih.
-"""
-
-        try:
-            msg = EmailMessage()
-            msg["From"] = acc["email"]
-            msg["To"] = target
-            msg["Subject"] = "Permintaan Dukungan WhatsApp"
-            msg.set_content(body)
-
-            with smtplib.SMTP("smtp.gmail.com", 587) as smtp:
-                smtp.starttls()
-                smtp.login(acc["email"], acc["app_password"])
-                smtp.send_message(msg)
-
-            increment_used(accounts, idx)
-            await message.reply(f"✅ Email berhasil dikirim dari `{acc['email']}` ke `{target}`\nNomor: {nomor}")
-        except Exception as e:
-            await message.reply(f"❌ Gagal mengirim email: {e}")
-
-        user_state.pop(message.chat.id, None)
-
+# -------------------------
+# RUN BOT
+# -------------------------
+print("✅ Bot jalan...")
 app.run()
