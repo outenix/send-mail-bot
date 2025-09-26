@@ -17,11 +17,6 @@ user_state = {}  # contoh: { chat_id: "waiting_for_email" }
 # ======================
 # MENU
 # ======================
-@app.on_message(filters.command("start"))
-async def start_handler(client, message):
-    await show_menu(message)
-
-
 async def show_menu(message):
     available, usedup = rotator.get_accounts()
     targets = rotator.get_targets()
@@ -44,7 +39,16 @@ async def show_menu(message):
         [InlineKeyboardButton("📩 Kirim Email", callback_data="send_email")],
     ]
 
-    await message.reply(text, reply_markup=InlineKeyboardMarkup(buttons))
+    # Bisa dipanggil dari /start atau callback
+    if hasattr(message, "reply"):
+        await message.reply(text, reply_markup=InlineKeyboardMarkup(buttons))
+    else:
+        await message.edit_text(text, reply_markup=InlineKeyboardMarkup(buttons))
+
+
+@app.on_message(filters.command("start"))
+async def start_handler(client, message):
+    await show_menu(message)
 
 
 # ======================
@@ -60,7 +64,12 @@ async def callback_handler(client, callback_query):
         user_state.pop(chat_id, None)
 
     if data == "add_email":
-        await client.send_message(chat_id, "✉️ Kirim email & app password dengan format:\n`email|apppassword`")
+        await callback_query.message.edit_text(
+            "✉️ Kirim email & app password dengan format:\n`email|apppassword`",
+            reply_markup=InlineKeyboardMarkup(
+                [[InlineKeyboardButton("⬅️ Kembali", callback_data="back_menu")]]
+            )
+        )
         user_state[chat_id] = "waiting_for_email"
 
     elif data == "del_menu":
@@ -70,34 +79,44 @@ async def callback_handler(client, callback_query):
             [InlineKeyboardButton("🗑️ Hapus Email Tujuan", callback_data="del_target")],
             [InlineKeyboardButton("⬅️ Kembali", callback_data="back_menu")],
         ]
-        await callback_query.message.reply(
+        await callback_query.message.edit_text(
             "Pilih opsi hapus:", reply_markup=InlineKeyboardMarkup(buttons)
         )
 
     elif data == "del_used":
         rotator.delete_used()
-        await client.send_message(chat_id, "🗑️ Semua email yang sudah dipakai 2x dihapus.")
+        await callback_query.message.edit_text("🗑️ Semua email yang sudah dipakai 2x dihapus.")
         await show_menu(callback_query.message)
 
     elif data == "del_all":
         rotator.clear_accounts()
-        await client.send_message(chat_id, "🗑️ Semua email pengirim berhasil dihapus.")
+        await callback_query.message.edit_text("🗑️ Semua email pengirim berhasil dihapus.")
         await show_menu(callback_query.message)
 
     elif data == "del_target":
         rotator.clear_targets()
-        await client.send_message(chat_id, "🗑️ Semua email tujuan berhasil dihapus.")
+        await callback_query.message.edit_text("🗑️ Semua email tujuan berhasil dihapus.")
         await show_menu(callback_query.message)
 
     elif data == "back_menu":
         await show_menu(callback_query.message)
 
     elif data == "add_target":
-        await client.send_message(chat_id, "🎯 Kirim email tujuan yang ingin ditambahkan.")
+        await callback_query.message.edit_text(
+            "🎯 Kirim email tujuan yang ingin ditambahkan.",
+            reply_markup=InlineKeyboardMarkup(
+                [[InlineKeyboardButton("⬅️ Kembali", callback_data="back_menu")]]
+            )
+        )
         user_state[chat_id] = "waiting_for_target"
 
     elif data == "send_email":
-        await client.send_message(chat_id, "📱 Masukkan nomor WhatsApp dengan format internasional (contoh: +6281234567890)")
+        await callback_query.message.edit_text(
+            "📱 Masukkan nomor WhatsApp dengan format internasional (contoh: +6281234567890)",
+            reply_markup=InlineKeyboardMarkup(
+                [[InlineKeyboardButton("⬅️ Kembali", callback_data="back_menu")]]
+            )
+        )
         user_state[chat_id] = "waiting_for_number"
 
     await callback_query.answer()
@@ -123,6 +142,7 @@ async def input_handler(client, message):
         rotator.save_accounts(accounts)
         await message.reply(f"✅ Email {email} berhasil ditambahkan.")
         user_state.pop(chat_id, None)
+        await show_menu(message)
         return
 
     # Jika sedang menunggu email tujuan
@@ -130,6 +150,7 @@ async def input_handler(client, message):
         rotator.add_target(text)
         await message.reply(f"✅ Email tujuan {text} berhasil ditambahkan.")
         user_state.pop(chat_id, None)
+        await show_menu(message)
         return
 
     # Jika sedang menunggu nomor WhatsApp
@@ -141,10 +162,12 @@ async def input_handler(client, message):
         if not targets:
             await message.reply("⚠️ Email tujuan tidak tersedia.")
             user_state.pop(chat_id, None)
+            await show_menu(message)
             return
         if not sender:
             await message.reply("⚠️ Email pengirim tidak tersedia.")
             user_state.pop(chat_id, None)
+            await show_menu(message)
             return
 
         target = targets[0]  # sementara ambil tujuan pertama
@@ -167,6 +190,7 @@ async def input_handler(client, message):
             await message.reply(f"❌ Gagal kirim email: {info}")
 
         user_state.pop(chat_id, None)
+        await show_menu(message)
 
 
 print("✅ Bot jalan...")
