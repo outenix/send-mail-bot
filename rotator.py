@@ -7,12 +7,21 @@ ACCOUNT_FILE = "account.json"
 EMAIL_FILE = "email.json"
 
 
+# =========================
+# ACCOUNT HANDLING
+# =========================
 def load_accounts():
     if not os.path.exists(ACCOUNT_FILE):
         with open(ACCOUNT_FILE, "w") as f:
             json.dump([], f)
+
     with open(ACCOUNT_FILE, "r") as f:
-        return json.load(f)
+        try:
+            accounts = json.load(f)
+        except json.JSONDecodeError:
+            accounts = []
+
+    return accounts
 
 
 def save_accounts(accounts):
@@ -20,25 +29,16 @@ def save_accounts(accounts):
         json.dump(accounts, f, indent=2)
 
 
-def load_targets():
-    if not os.path.exists(EMAIL_FILE):
-        with open(EMAIL_FILE, "w") as f:
-            json.dump({"targets": []}, f)
-    with open(EMAIL_FILE, "r") as f:
-        return json.load(f)
-
-
-def save_targets(data):
-    with open(EMAIL_FILE, "w") as f:
-        json.dump(data, f, indent=2)
+def get_accounts():
+    accounts = load_accounts()
+    available = [acc for acc in accounts if acc.get("used", 0) < 2]
+    usedup = [acc for acc in accounts if acc.get("used", 0) >= 2]
+    return available, usedup
 
 
 def rotate_account():
-    accounts = load_accounts()
-    for acc in accounts:
-        if acc.get("used", 0) < 2:
-            return acc
-    return None
+    available, _ = get_accounts()
+    return available[0] if available else None
 
 
 def mark_account_used(email):
@@ -62,6 +62,50 @@ def delete_used():
     save_accounts(accounts)
 
 
+# =========================
+# TARGET HANDLING
+# =========================
+def load_targets():
+    if not os.path.exists(EMAIL_FILE):
+        with open(EMAIL_FILE, "w") as f:
+            json.dump({"targets": []}, f)
+
+    with open(EMAIL_FILE, "r") as f:
+        try:
+            data = json.load(f)
+        except json.JSONDecodeError:
+            data = {"targets": []}
+
+    # Jika salah format (list), ubah jadi dict
+    if isinstance(data, list):
+        data = {"targets": data}
+
+    if "targets" not in data:
+        data["targets"] = []
+
+    return data
+
+
+def save_targets(data):
+    with open(EMAIL_FILE, "w") as f:
+        json.dump(data, f, indent=2)
+
+
+def add_target(email_target):
+    data = load_targets()
+    if email_target not in data["targets"]:
+        data["targets"].append(email_target)
+    save_targets(data)
+
+
+def get_targets():
+    data = load_targets()
+    return data.get("targets", [])
+
+
+# =========================
+# EMAIL SENDER
+# =========================
 def send_mail(sender_email, app_password, target_email, subject, body):
     try:
         msg = MIMEText(body, "plain", "utf-8")
@@ -77,25 +121,3 @@ def send_mail(sender_email, app_password, target_email, subject, body):
         return True, "Email berhasil dikirim."
     except Exception as e:
         return False, str(e)
-
-
-def add_target(email_target):
-    data = load_targets()
-    if "targets" not in data:
-        data["targets"] = []
-    if email_target not in data["targets"]:
-        data["targets"].append(email_target)
-    save_targets(data)
-
-
-def get_targets():
-    data = load_targets()
-    return data.get("targets", [])
-
-
-# 🔹 Tambahan untuk kompatibilitas main.py
-def get_accounts():
-    accounts = load_accounts()
-    available = [acc for acc in accounts if acc.get("used", 0) < 2]
-    usedup = [acc for acc in accounts if acc.get("used", 0) >= 2]
-    return available, usedup
