@@ -7,9 +7,9 @@ from rotator import (
 import smtplib
 from email.message import EmailMessage
 
-API_ID = 123456            # ganti dengan API ID kamu
-API_HASH = "abc123..."     # ganti dengan API HASH kamu
-BOT_TOKEN = "1234:abcd"    # ganti dengan BOT TOKEN kamu
+API_ID = 3731359            # ganti dengan API ID kamu
+API_HASH = "036ee2d35316873cb402ac61ea3f5618"     # ganti dengan API HASH kamu
+BOT_TOKEN = "8208608845:AAFcTuETk5Tm7jlBzJ3GEXgw1oBg0rRBFWw"    # ganti dengan BOT TOKEN kamu
 
 app = Client("mailbot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
 
