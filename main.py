@@ -9,9 +9,7 @@ BOT_TOKEN = "8208608845:AAFcTuETk5Tm7jlBzJ3GEXgw1oBg0rRBFWw"
 
 app = Client("bot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
 
-# -------------------------
-# START COMMAND
-# -------------------------
+
 @app.on_message(filters.command("start"))
 async def start_handler(client, message):
     available, usedup = rotator.get_accounts()
@@ -34,9 +32,6 @@ async def start_handler(client, message):
     await message.reply_text(teks, reply_markup=InlineKeyboardMarkup(buttons))
 
 
-# -------------------------
-# HANDLER TOMBOL
-# -------------------------
 @app.on_callback_query()
 async def callback_handler(client, callback_query):
     data = callback_query.data
@@ -53,14 +48,11 @@ async def callback_handler(client, callback_query):
         await client.send_message(chat_id, "Masukkan nomor WhatsApp dengan format internasional, contoh:\n`+6281234567890`")
 
 
-# -------------------------
-# HANDLER TEXT INPUT
-# -------------------------
 @app.on_message(filters.text & ~filters.command(["start"]))
 async def text_handler(client, message):
     text = message.text.strip()
 
-    # Input untuk tambah email pengirim
+    # Input tambah email pengirim
     if "|" in text:
         try:
             email, app_password = text.split("|", 1)
@@ -70,13 +62,13 @@ async def text_handler(client, message):
             await message.reply(f"❌ Gagal tambah email: {e}")
         return
 
-    # Input untuk tambah email tujuan
+    # Input tambah email tujuan
     if "@" in text and "|" not in text and not text.startswith("+"):
         rotator.add_target(text.strip())
         await message.reply("✅ Email tujuan berhasil ditambahkan.")
         return
 
-    # Input untuk nomor telepon
+    # Input nomor telepon
     if text.startswith("+"):
         available, _ = rotator.get_accounts()
         target = rotator.get_first_target()
@@ -84,13 +76,12 @@ async def text_handler(client, message):
         if not available:
             await message.reply("❌ Email pengirim tidak tersedia.")
             return
-
         if not target:
             await message.reply("❌ Email tujuan tidak tersedia.")
             return
 
         sender = available[0]
-        # update penggunaan
+        # Update penggunaan
         sender["used"] += 1
         accounts = rotator.load_accounts()
         for acc in accounts:
@@ -98,7 +89,7 @@ async def text_handler(client, message):
                 acc["used"] = sender["used"]
         rotator.save_accounts(accounts)
 
-        # Simulasi kirim email
+        # Isi pesan
         body = (
             f"Halo Tim Dukungan WhatsApp! Perkenalkan, nama saya [Repzsx] dan nomor WhatsApp saya ({text}), "
             "Saya mengalami masalah karena setiap kali mencoba masuk atau mendaftar, saya selalu mendapat pesan "
@@ -107,19 +98,25 @@ async def text_handler(client, message):
             "tanpa masalah. Mohon hubungi kami sesegera mungkin. Terima kasih."
         )
 
-        # Disini harusnya pakai smtplib untuk benar-benar mengirim email
-        # sekarang kita hanya simulasi
-        await message.reply(
-            f"📤 Email dikirim!\n\n"
-            f"Pengirim: {sender['email']}\n"
-            f"Tujuan: {target}\n"
-            f"Nomor: {text}\n\n"
-            f"Isi Pesan:\n{body}"
+        # Kirim email lewat Gmail
+        success, info = rotator.send_mail(
+            sender["email"],
+            sender["app_password"],
+            target,
+            "Dukungan WhatsApp",
+            body
         )
 
+        if success:
+            await message.reply(
+                f"📤 Email berhasil dikirim!\n\n"
+                f"Pengirim: {sender['email']}\n"
+                f"Tujuan: {target}\n"
+                f"Nomor: {text}"
+            )
+        else:
+            await message.reply(f"❌ Gagal kirim email: {info}")
 
-# -------------------------
-# RUN BOT
-# -------------------------
+
 print("✅ Bot jalan...")
 app.run()
