@@ -39,7 +39,7 @@ async def show_menu(message):
 
     buttons = [
         [InlineKeyboardButton("➕ Tambah Email", callback_data="add_email")],
-        [InlineKeyboardButton("🗑️ Hapus Email (used>=2)", callback_data="del_email")],
+        [InlineKeyboardButton("🗑️ Hapus Email", callback_data="del_menu")],
         [InlineKeyboardButton("🎯 Tambah Email Tujuan", callback_data="add_target")],
         [InlineKeyboardButton("📩 Kirim Email", callback_data="send_email")],
     ]
@@ -55,13 +55,41 @@ async def callback_handler(client, callback_query):
     data = callback_query.data
     chat_id = callback_query.message.chat.id
 
+    # Hentikan state lama jika user klik tombol lain
+    if chat_id in user_state:
+        user_state.pop(chat_id, None)
+
     if data == "add_email":
         await client.send_message(chat_id, "✉️ Kirim email & app password dengan format:\n`email|apppassword`")
         user_state[chat_id] = "waiting_for_email"
 
-    elif data == "del_email":
+    elif data == "del_menu":
+        buttons = [
+            [InlineKeyboardButton("🗑️ Hapus Email Terpakai", callback_data="del_used")],
+            [InlineKeyboardButton("🗑️ Hapus Semua Email", callback_data="del_all")],
+            [InlineKeyboardButton("🗑️ Hapus Email Tujuan", callback_data="del_target")],
+            [InlineKeyboardButton("⬅️ Kembali", callback_data="back_menu")],
+        ]
+        await callback_query.message.reply(
+            "Pilih opsi hapus:", reply_markup=InlineKeyboardMarkup(buttons)
+        )
+
+    elif data == "del_used":
         rotator.delete_used()
         await client.send_message(chat_id, "🗑️ Semua email yang sudah dipakai 2x dihapus.")
+        await show_menu(callback_query.message)
+
+    elif data == "del_all":
+        rotator.clear_accounts()
+        await client.send_message(chat_id, "🗑️ Semua email pengirim berhasil dihapus.")
+        await show_menu(callback_query.message)
+
+    elif data == "del_target":
+        rotator.clear_targets()
+        await client.send_message(chat_id, "🗑️ Semua email tujuan berhasil dihapus.")
+        await show_menu(callback_query.message)
+
+    elif data == "back_menu":
         await show_menu(callback_query.message)
 
     elif data == "add_target":
