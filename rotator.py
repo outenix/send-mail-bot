@@ -94,8 +94,16 @@ def save_targets(data):
 
 def add_target(email_target):
     data = load_targets()
-    if email_target not in data["targets"]:
+
+    # pastikan selalu string
+    if isinstance(email_target, dict):
+        email_target = email_target.get("email", "")
+    if isinstance(email_target, list) and email_target:
+        email_target = email_target[0]
+
+    if email_target and email_target not in data["targets"]:
         data["targets"].append(email_target)
+
     save_targets(data)
 
 
@@ -109,7 +117,12 @@ def get_targets():
 # =========================
 def send_mail(sender_email, app_password, target_email, subject, body):
     try:
-        # Gunakan MIMEMultipart supaya fleksibel (bisa HTML/attachment juga kalau perlu)
+        # pastikan target email berupa string
+        if isinstance(target_email, dict):
+            target_email = target_email.get("email", "")
+        elif isinstance(target_email, list):
+            target_email = target_email[0]
+
         msg = MIMEMultipart()
         msg["From"] = sender_email
         msg["To"] = target_email
@@ -118,8 +131,8 @@ def send_mail(sender_email, app_password, target_email, subject, body):
 
         with smtplib.SMTP("smtp.gmail.com", 587) as server:
             server.starttls()
-            server.login(sender_email, app_password)  # pakai App Password Gmail
-            server.sendmail(sender_email, target_email, msg.as_string())
+            server.login(sender_email, app_password)
+            server.sendmail(sender_email, [target_email], msg.as_string())
 
         return True, "Email berhasil dikirim."
     except Exception as e:
