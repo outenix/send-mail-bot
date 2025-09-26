@@ -41,8 +41,10 @@ def get_accounts():
     usedup = [acc for acc in accounts if acc.get("used", 0) >= 2]
     return available, usedup
 
+
 def clear_accounts():
-    save_json("accounts.json", [])
+    save_accounts([])
+
 
 def rotate_account():
     available, _ = get_accounts()
@@ -94,7 +96,6 @@ def load_targets():
                 fixed_targets.append(item)
         data = {"targets": fixed_targets}
 
-    # Pastikan key "targets" ada
     if "targets" not in data:
         data["targets"] = []
 
@@ -130,6 +131,10 @@ def add_target(email_target):
 def get_targets():
     data = load_targets()
     return data.get("targets", [])
+
+
+def clear_targets():
+    save_targets({"targets": []})
 
 
 # =========================
