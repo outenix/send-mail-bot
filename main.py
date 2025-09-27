@@ -175,7 +175,7 @@ async def input_handler(client, message):
 """
 
         success, info = rotator.send_mail(
-            sender["email"], sender["app_password"], target, "Dukungan WhatsApp", body
+            sender["email"], sender["app_password"], target, "Pertanyaan mengenai WhatsApp (Beta) untuk Android", body
         )
 
         if success:
